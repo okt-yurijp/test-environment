@@ -28,7 +28,7 @@
 #include "logger_ten.h"
 
 /* How long to wait for Logger shutdown, in seconds */
-#define SHUTDOWN_TIMEOUT 120
+#define SHUTDOWN_TIMEOUT 360
 
 static bool logger_finished = false;
 static bool signal_received = false;
