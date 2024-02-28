@@ -39,6 +39,8 @@ struct tapi_rdma_perf_app {
     tapi_job_factory_t            *factory;
     /** Name of the test application. */
     char                           name[TAPI_RDMA_PERF_APP_NAME_LEN];
+    /** Arguments that are used when running the tool. */
+    te_vec                         args;
 };
 
 /* See description in tapi_rdma_perf.h */
@@ -58,6 +60,7 @@ tapi_rdma_perf_app_destroy(tapi_rdma_perf_app *app)
     }
 
     tapi_job_factory_destroy(app->factory);
+    te_vec_deep_free(&app->args);
     free(app);
 }
 
@@ -312,30 +315,31 @@ tapi_rdma_perf_app_init(tapi_job_factory_t *factory,
     te_errno                rc = 0;
     tapi_job_simple_desc_t  job_descr;
     tapi_rdma_perf_app     *handle = NULL;
-    te_vec                  argv;
 
     if (factory == NULL || opts == NULL || app == NULL)
         return TE_RC(TE_TAPI, TE_EINVAL);
 
     handle = TE_ALLOC(sizeof(*handle));
     handle->factory = factory;
+    handle->args = TE_VEC_INIT(char *);
 
     TE_SPRINTF(handle->name, "ib_%s_%s",
                te_enum_map_from_value(op_type_map, opts->op_type),
                te_enum_map_from_value(test_type_map, opts->tst_type));
 
-    rc = build_argv(handle->name, opts, is_client, &argv);
+    rc = build_argv(handle->name, opts, is_client, &handle->args);
     if (rc != 0)
     {
         ERROR("Failed to initialize RDMA perf app options: %r", rc);
+        te_vec_deep_free(&handle->args);
         free(handle);
         return TE_RC(TE_TAPI, rc);
     }
 
     job_descr.spawner = NULL;
     job_descr.name = NULL;
-    job_descr.program = TE_VEC_GET(char *, &argv, 0);
-    job_descr.argv = (const char **)argv.data.ptr;
+    job_descr.program = TE_VEC_GET(char *, &handle->args, 0);
+    job_descr.argv = (const char **)handle->args.data.ptr;
     job_descr.env = NULL;
     job_descr.job_loc = &handle->job;
     job_descr.stdin_loc = NULL;
@@ -367,10 +371,33 @@ tapi_rdma_perf_app_init(tapi_job_factory_t *factory,
     {
         ERROR("Initialization of RDMA %s app job context failed: %r",
               handle->name, rc);
+        te_vec_deep_free(&handle->args);
         free(handle);
     }
 
-    te_vec_deep_free(&argv);
-
     return rc;
+}
+
+te_errno
+tapi_rdma_perf_get_cmd_str(tapi_rdma_perf_app *app, te_string *cmd)
+{
+    char **iter;
+    te_errno rc;
+
+    if (cmd == NULL)
+        return TE_EINVAL;
+
+    te_string_reset(cmd);
+
+    TE_VEC_FOREACH(&(app->args), iter)
+    {
+        if (*iter == NULL)
+            break;
+
+        rc = te_string_append(cmd, "%s ", *iter);
+        if (rc != 0)
+            return rc;
+    }
+
+    return 0;
 }

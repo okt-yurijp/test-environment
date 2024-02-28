@@ -288,6 +288,19 @@ extern te_errno tapi_rdma_perf_app_start(tapi_rdma_perf_app *app);
 extern te_errno tapi_rdma_perf_app_wait(tapi_rdma_perf_app *app,
                                         int timeout_s);
 
+/**
+ * Get CMD in string representation that will be used to run RDMA perf app.
+ *
+ * @param[in]  app             RDMA perf app context.
+ * @param[out] cmd             Resulting command line.
+ *
+ * @note It is expected that @p cmd is allocated.
+ *       Can be called only after @b tapi_rdma_perf_app_init().
+ *
+ * @return Status code.
+ */
+te_errno tapi_rdma_perf_get_cmd_str(tapi_rdma_perf_app *app, te_string *cmd);
+
 /**@} <!-- END tapi_rdma_perf --> */
 
 #ifdef __cplusplus
