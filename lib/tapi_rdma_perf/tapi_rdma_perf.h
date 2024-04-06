@@ -178,6 +178,13 @@ const tapi_rdma_perf_atomic_opts tapi_rdma_perf_atomic_opts_def = {
     .outs_num                          = TAPI_JOB_OPT_UINT_UNDEF,
 };
 
+/** Performance test results structure. */
+typedef struct tapi_rdma_perf_results {
+    int qp; /**< Queue Pair Number used by the test. */
+} tapi_rdma_perf_results;
+
+#define TAPI_RDMA_PERF_RESULTS_INIT { -1 }
+
 /** RDMA perf context */
 typedef struct tapi_rdma_perf_app tapi_rdma_perf_app;
 
@@ -277,16 +284,18 @@ extern te_errno tapi_rdma_perf_app_start(tapi_rdma_perf_app *app);
 
 /**
  * Wait until RDMA perf client-specific app finishes its work.
- * Note, function jumps to cleanup when timeout expires.
  *
- * @param app             RDMA perf app context.
- * @param timeout_s       Time to wait for app results.
- *                        It MUST be big enough to finish client normally.
+ * If the timeout expires, kill the app and receive all available results.
+ *
+ * @param[in]  app             RDMA perf app context.
+ * @param[in]  timeout_s       Time to wait for app results.
+ * @param[out] results         Where app results should be stored.
  *
  * @return Status code.
  */
 extern te_errno tapi_rdma_perf_app_wait(tapi_rdma_perf_app *app,
-                                        int timeout_s);
+                                        int timeout_s,
+                                        tapi_rdma_perf_results *results);
 
 /**
  * Get CMD in string representation that will be used to run RDMA perf app.

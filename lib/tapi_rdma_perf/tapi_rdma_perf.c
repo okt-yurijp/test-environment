@@ -10,6 +10,7 @@
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <signal.h>
 
 #include "tapi_rpc_stdio.h"
 #include "tapi_rpc_signal.h"
@@ -41,6 +42,8 @@ struct tapi_rdma_perf_app {
     char                           name[TAPI_RDMA_PERF_APP_NAME_LEN];
     /** Arguments that are used when running the tool. */
     te_vec                         args;
+    /** Channel for Queue Pair Number retrieval. */
+    tapi_job_channel_t            *qp;
 };
 
 /* See description in tapi_rdma_perf.h */
@@ -260,14 +263,42 @@ tapi_rdma_perf_app_start(tapi_rdma_perf_app *app)
 
 /* See description in tapi_rdma_perf.h */
 te_errno
-tapi_rdma_perf_app_wait(tapi_rdma_perf_app *app, int timeout_s)
+tapi_rdma_perf_app_wait(tapi_rdma_perf_app *app, int timeout_s,
+                        tapi_rdma_perf_results *results)
 {
     tapi_job_status_t   status = {0};
     te_errno            rc = 0;
+    tapi_job_buffer_t   buffer = TAPI_JOB_BUFFER_INIT;
 
     rc = tapi_job_wait(app->job, TE_SEC2MS(timeout_s), &status);
+    if (TE_RC_GET_ERROR(rc) == TE_EINPROGRESS)
+    {
+        rc = tapi_job_kill(app->job, SIGINT);
+
+        if (rc == 0)
+            rc = tapi_job_wait(app->job, 2, &status);
+    }
+
     if (rc != 0)
         return rc;
+
+    if (results != NULL)
+    {
+        rc = tapi_job_receive(TAPI_JOB_CHANNEL_SET(app->qp), 0, &buffer);
+        if (rc != 0)
+        {
+            ERROR("Failed to receive QPN from perftest: %r", rc);
+        }
+        else
+        {
+            rc = te_strtoi(buffer.data.ptr, 16, &results->qp);
+            if (rc != 0)
+            {
+                ERROR("Failed to parse QPN '%s': %r", buffer.data.ptr, rc);
+                results->qp = -1;
+            }
+        }
+    }
 
     if (status.type == TAPI_JOB_STATUS_SIGNALED)
     {
@@ -359,6 +390,13 @@ tapi_rdma_perf_app_init(tapi_job_factory_t *factory,
             .readable = false,
             .filter_name = is_client ? "perf_client_stdout" :
                                        "perf_server_stdout",
+        },
+        {
+            .use_stdout = true,
+            .readable = true,
+            .re = "local address:  LID .+? QPN (0x\\w+) PSN .+?$",
+            .extract = 1,
+            .filter_var = &handle->qp,
         }
     );
 
