@@ -55,14 +55,16 @@ typedef enum {
 
 /** Common options to all tests. */
 typedef struct tapi_rdma_perf_common_opts {
-    tapi_job_opt_uint_t         port;      /**< Listen on/connect to port. */
-    tapi_job_opt_uint_t         mtu;       /**< QP MTU size. */
-    tapi_rdma_perf_conn_type_t  conn_type; /**< Connection type. */
-    const char                 *ib_dev;    /**< IB device name. */
-    tapi_job_opt_uint_t         ib_port;   /**< IB device network port. */
-    te_optional_uintmax_t       msg_size;  /**< Size of message to exchange. */
-    te_optional_uintmax_t       iter_num;  /**< Number of exchanges. */
-    tapi_job_opt_uint_t         rx_depth;  /**< Receive queue depth. */
+    tapi_job_opt_uint_t         port;       /**< Listen on/connect to port. */
+    tapi_job_opt_uint_t         mtu;        /**< QP MTU size. */
+    tapi_rdma_perf_conn_type_t  conn_type;  /**< Connection type. */
+    const char                 *ib_dev;     /**< IB device name. */
+    tapi_job_opt_uint_t         ib_port;    /**< IB device network port. */
+    te_optional_uintmax_t       msg_size;   /**< Size of message to
+                                                 exchange. */
+    te_optional_uintmax_t       iter_num;   /**< Number of exchanges. */
+    tapi_job_opt_uint_t         rx_depth;   /**< Receive queue depth. */
+    tapi_job_opt_uint_t         duration_s; /**< Test duration, seconds. */
 } tapi_rdma_perf_common_opts;
 
 /** Options for latency tests. */
@@ -137,6 +139,7 @@ const tapi_rdma_perf_common_opts tapi_rdma_perf_cmn_opts_def = {
     .msg_size                          = TAPI_JOB_OPT_UINTMAX_UNDEF,
     .iter_num                          = TAPI_JOB_OPT_UINTMAX_UNDEF,
     .rx_depth                          = TAPI_JOB_OPT_UINT_UNDEF,
+    .duration_s                        = TAPI_JOB_OPT_UINT_UNDEF,
 };
 
 /** Default values for options of latency RDMA perf tests. */

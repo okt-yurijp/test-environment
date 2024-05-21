@@ -119,7 +119,9 @@ build_argv(const char *path, const tapi_rdma_perf_opts *opts,
         TAPI_JOB_OPT_UINTMAX_T("--iters=", true, NULL,
                                tapi_rdma_perf_common_opts, iter_num),
         TAPI_JOB_OPT_UINT_T("--rx-depth=", true, NULL,
-                            tapi_rdma_perf_common_opts, rx_depth)
+                            tapi_rdma_perf_common_opts, rx_depth),
+        TAPI_JOB_OPT_UINT_T("--duration=", true, NULL,
+                            tapi_rdma_perf_common_opts, duration_s)
     );
 
     if (is_client && opts->server_ip == NULL)
