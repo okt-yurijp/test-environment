@@ -30,6 +30,16 @@
 /* Maximum length of RDMA test name */
 #define TAPI_RDMA_PERF_APP_NAME_LEN 32
 
+/** Type of perftest stats report. */
+typedef enum {
+    /** Report for BW tests. */
+    TAPI_RDMA_PERF_REPORT_BW,
+    /** Report for LAT tests. */
+    TAPI_RDMA_PERF_REPORT_LAT,
+    /** Report for LAT tests when duration option is set. */
+    TAPI_RDMA_PERF_REPORT_LAT_DUR,
+} tapi_rdma_perf_report_type_t;
+
 /* See description in tapi_rdma_perf.h */
 struct tapi_rdma_perf_app {
     /** Job instance. */
@@ -40,10 +50,15 @@ struct tapi_rdma_perf_app {
     tapi_job_factory_t            *factory;
     /** Name of the test application. */
     char                           name[TAPI_RDMA_PERF_APP_NAME_LEN];
+    /** Type of perftest stats report. */
+    tapi_rdma_perf_report_type_t   report_type;
     /** Arguments that are used when running the tool. */
     te_vec                         args;
     /** Channel for Queue Pair Number retrieval. */
     tapi_job_channel_t            *qp;
+    /** Channel to collect stats. */
+    tapi_job_channel_t            *stats;
+
 };
 
 /* See description in tapi_rdma_perf.h */
@@ -263,6 +278,61 @@ tapi_rdma_perf_app_start(tapi_rdma_perf_app *app)
     return tapi_job_start(app->job);
 }
 
+/**
+ * Parse perftest statistics.
+ *
+ * @param[in]   stats_str  String with all statistics taken
+ *                         from the perftest output.
+ * @param[in]   type       Type of perftest report.
+ * @param[out]  stats      Parsed perftest statistics.
+ */
+static void
+parse_stats(const char *stats_str, tapi_rdma_perf_report_type_t type,
+            tapi_rdma_perf_stats *stats)
+{
+    int ret;
+
+    assert(stats != NULL);
+
+    stats->parse_error = true;
+
+    switch (type)
+    {
+        case TAPI_RDMA_PERF_REPORT_BW:
+            ret = sscanf(stats_str,
+                         "%lu %" PRIu64 " %lf %lf %lf",
+                         &stats->bytes, &stats->iterations,
+                         &stats->bw.peak, &stats->bw.average,
+                         &stats->bw.msg_rate);
+            if (ret != 5)
+                return;
+            break;
+
+        case TAPI_RDMA_PERF_REPORT_LAT:
+            ret = sscanf(stats_str, "%lu %" PRIu64 " %f %f %f %f %f %f %f",
+                         &stats->bytes, &stats->iterations,
+                         &stats->lat.min_usec, &stats->lat.max_usec,
+                         &stats->lat.typical_usec, &stats->lat.avg_usec,
+                         &stats->lat.stdev_usec, &stats->lat.percent_99_00,
+                         &stats->lat.percent_99_90);
+            if (ret != 9)
+                return;
+            break;
+
+        case TAPI_RDMA_PERF_REPORT_LAT_DUR:
+            ret = sscanf(stats_str, "%lu %" PRIu64 " %f %f",
+                         &stats->bytes, &stats->iterations,
+                         &stats->lat_dur.avg_usec, &stats->lat_dur.avg_tps);
+            if (ret != 4)
+                return;
+            break;
+        default:
+            assert(false);
+    }
+
+    stats->parse_error = false;
+}
+
 /* See description in tapi_rdma_perf.h */
 te_errno
 tapi_rdma_perf_app_wait(tapi_rdma_perf_app *app, int timeout_s,
@@ -300,6 +370,21 @@ tapi_rdma_perf_app_wait(tapi_rdma_perf_app *app, int timeout_s,
                 results->qp = -1;
             }
         }
+
+        te_string_reset(&buffer.data);
+
+        rc = tapi_job_receive(TAPI_JOB_CHANNEL_SET(app->stats), 0, &buffer);
+        if (rc != 0)
+        {
+            ERROR("Failed to receive stats from perftest: %r", rc);
+            results->stats.parse_error = true;
+        }
+        else
+        {
+            parse_stats(buffer.data.ptr, app->report_type, &results->stats);
+        }
+
+        te_string_free(&buffer.data);
     }
 
     if (status.type == TAPI_JOB_STATUS_SIGNALED)
@@ -353,6 +438,25 @@ tapi_rdma_perf_app_init(tapi_job_factory_t *factory,
         return TE_RC(TE_TAPI, TE_EINVAL);
 
     handle = TE_ALLOC(sizeof(*handle));
+    switch (opts->tst_type)
+    {
+        case TAPI_RDMA_PERF_TEST_BW:
+            handle->report_type = TAPI_RDMA_PERF_REPORT_BW;
+            break;
+
+        case TAPI_RDMA_PERF_TEST_LAT:
+            if (opts->common.duration_s.defined)
+                handle->report_type = TAPI_RDMA_PERF_REPORT_LAT_DUR;
+            else
+                handle->report_type = TAPI_RDMA_PERF_REPORT_LAT;
+            break;
+
+        default:
+            ERROR("Unsupported test type, %d", opts->tst_type);
+            free(handle);
+            return TE_RC(TE_TAPI, TE_EINVAL);
+    }
+
     handle->factory = factory;
     handle->args = TE_VEC_INIT(char *);
 
@@ -399,6 +503,13 @@ tapi_rdma_perf_app_init(tapi_job_factory_t *factory,
             .re = "local address:  LID .+? QPN (0x\\w+) PSN .+?$",
             .extract = 1,
             .filter_var = &handle->qp,
+        },
+        {
+            .use_stdout = true,
+            .readable = true,
+            .re = "(?m)^ #bytes\\b.+?$\\n^(.+?)$",
+            .extract = 1,
+            .filter_var = &handle->stats,
         }
     );
 

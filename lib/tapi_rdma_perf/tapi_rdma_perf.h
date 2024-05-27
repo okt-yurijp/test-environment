@@ -181,12 +181,59 @@ const tapi_rdma_perf_atomic_opts tapi_rdma_perf_atomic_opts_def = {
     .outs_num                          = TAPI_JOB_OPT_UINT_UNDEF,
 };
 
+/** Statistics for BW tests. */
+typedef struct tapi_rdma_perf_bw_stats {
+    /** BW peak in MB/sec.*/
+    double peak;
+    /** BW average in MB/sec. */
+    double average;
+    /** MsgRate in Mpps. */
+    double msg_rate;
+} tapi_rdma_perf_bw_stats;
+
+/** Statistics for LAT tests. */
+typedef struct tapi_rdma_perf_lat_stats {
+    float min_usec; /**< Minimal latency. */
+    float max_usec; /**< Maximum latency. */
+    float typical_usec; /**< Typical latency. */
+    float avg_usec; /**< Average latency. */
+    float stdev_usec; /**< Standard deviation. */
+    float percent_99_00; /**< 99.00 percentile. */
+    float percent_99_90; /**< 99.90 percentile. */
+} tapi_rdma_perf_lat_stats;
+
+/** Statistics for LAT tests when duration option is set. */
+typedef struct tapi_rdma_perf_lat_dur_stats {
+    float avg_usec; /**< Average latency. */
+    float avg_tps; /**< Average transactions per second. */
+} tapi_rdma_perf_lat_dur_stats;
+
+/** Common structure to hold perftest statistics. */
+typedef struct tapi_rdma_perf_stats
+{
+    /** Number of bytes that was sent per each iteration. */
+    unsigned long bytes;
+    /* Number of iterations that was performed. */
+    uint64_t iterations;
+    union {
+        /** BW-specific test stats. */
+        tapi_rdma_perf_bw_stats bw;
+        /** LAT-specific test stats. */
+        tapi_rdma_perf_lat_stats lat;
+        /** LAT test stats when duration option is set. */
+        tapi_rdma_perf_lat_dur_stats lat_dur;
+    };
+    /** Whether some error happened during the statistics parsing. */
+    bool parse_error;
+} tapi_rdma_perf_stats;
+
 /** Performance test results structure. */
 typedef struct tapi_rdma_perf_results {
     int qp; /**< Queue Pair Number used by the test. */
+    tapi_rdma_perf_stats stats; /**< Perftest stats report. */
 } tapi_rdma_perf_results;
 
-#define TAPI_RDMA_PERF_RESULTS_INIT { -1 }
+#define TAPI_RDMA_PERF_RESULTS_INIT { .qp = -1, .stats = { 0 } }
 
 /** RDMA perf context */
 typedef struct tapi_rdma_perf_app tapi_rdma_perf_app;
