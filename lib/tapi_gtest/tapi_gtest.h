@@ -15,6 +15,7 @@
 #define __TAPI_GTEST_H__
 
 #include "tapi_job.h"
+#include "tapi_job_opt.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -33,6 +34,17 @@ typedef struct tapi_gtest_impl {
     .out = {0},                                     \
 }
 
+typedef struct tapi_gtest_opts {
+    const char *gtest_filter;      /**< Concatenaion of Group and Test names */
+    bool run_disabled;             /**< Force run disabled test */
+    bool ipv4_only;                /**< Force use of IPv4 */
+    bool no_col;                   /**< Disable colours in GTest output */
+    tapi_job_opt_uint_t rand_seed; /**< Random seed */
+
+    const char *dev_name;          /**< RDMA device name for GTest */
+    tapi_job_opt_uint_t verbs_mtu; /**< MTU for RDMA QP */
+} tapi_gtest_opts;
+
 /** GTest handler */
 typedef struct tapi_gtest {
     const char *bin;        /**< Path to GTest binary */
@@ -42,28 +54,39 @@ typedef struct tapi_gtest {
     bool run_disabled;   /**< Force run disabled test */
     int rand_seed;          /**< Random seed */
 
+    tapi_gtest_opts opts;   /**< Options for Gtest binary */
+
     tapi_gtest_impl impl;   /**< Internal implementation struct */
 } tapi_gtest;
 
 /** Defaults for implementation for GTest handler */
-#define TAPI_GTEST_DEFAULTS (tapi_gtest)    \
-{                                           \
-    .bin = NULL,                            \
-    .group = NULL,                          \
-    .name = NULL,                           \
-    .run_disabled = false,                  \
-    .impl = TAPI_GTEST_IMPL_DEFAULTS,       \
+#define TAPI_GTEST_DEFAULTS (tapi_gtest)       \
+{                                              \
+    .bin = NULL,                               \
+    .group = NULL,                             \
+    .name = NULL,                              \
+    .opts.dev_name = NULL,                     \
+    .opts.run_disabled = false,                \
+    .opts.ipv4_only = false,                   \
+    .opts.no_col = true,                       \
+    .opts.verbs_mtu = TAPI_JOB_OPT_UINT_UNDEF, \
+    .opts.rand_seed = TAPI_JOB_OPT_UINT_UNDEF, \
+    .impl = TAPI_GTEST_IMPL_DEFAULTS,          \
 }
 
 /** A way for read gtest option from test arguments */
-#define TEST_GTEST_PARAM(_gtest) (tapi_gtest)    \
-{                                               \
-    .bin = TEST_STRING_PARAM(_gtest##_bin),      \
-    .group = TEST_STRING_PARAM(_gtest##_group),  \
-    .name = TEST_STRING_PARAM(_gtest##_name),    \
-    .rand_seed = TEST_INT_PARAM(te_rand_seed),  \
-    .run_disabled = false,                      \
-    .impl = TAPI_GTEST_IMPL_DEFAULTS,           \
+#define TEST_GTEST_PARAM(_gtest) (tapi_gtest)                             \
+{                                                                         \
+    .bin = TEST_STRING_PARAM(_gtest##_bin),                               \
+    .group = TEST_STRING_PARAM(_gtest##_group),                           \
+    .name = TEST_STRING_PARAM(_gtest##_name),                             \
+    .opts.verbs_mtu = TAPI_JOB_OPT_UINT_UNDEF,                            \
+    .opts.rand_seed = TE_OPTIONAL_UINT_VAL(TEST_INT_PARAM(te_rand_seed)), \
+    .opts.ipv4_only = false ,                                             \
+    .opts.run_disabled = false,                                           \
+    .opts.no_col = true,                                                  \
+    .opts.dev_name = NULL,                                                \
+    .impl = TAPI_GTEST_IMPL_DEFAULTS,                                     \
 }
 
 /** A way for read gtest option from test arguments */
