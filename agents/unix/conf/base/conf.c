@@ -4078,9 +4078,11 @@ mcast_link_addr_list(unsigned int gid, const char *oid,
         return 0;
     }
 #else
+/* It should be big enough to hold 20-octet IPoIB link-layer address. */
+#define MCAST_LINK_ADDR_LEN_MAX (20 * 3)
     FILE       *fd;
     char        ifn[IFNAMSIZ];
-    char        addrstr[ETHER_ADDR_LEN * 3];
+    char        addrstr[MCAST_LINK_ADDR_LEN_MAX];
 
 #define DEFAULT_MULTICAST_ETHER_ADDR_IPV4 "01005e000001"
 #define DEFAULT_MULTICAST_ETHER_ADDR_IPV6 "333300000001"
@@ -4103,26 +4105,28 @@ mcast_link_addr_list(unsigned int gid, const char *oid,
         if (strcmp(ifn, ifname) == 0)
         {
             int i;
+            size_t oktet_num = strlen(addrstr) / 2;
 
             /* exclude `default' addresses */
             if (strcmp(addrstr, DEFAULT_MULTICAST_ETHER_ADDR_IPV4) == 0 ||
                 strcmp(addrstr, DEFAULT_MULTICAST_ETHER_ADDR_IPV6) == 0)
                 continue;
 
-            for (i = 0; i < 6; i++)
+            for (i = 0; i < oktet_num; i++)
             {
-                if (sp >= MMAC_ADDR_BUF_SIZE - ETHER_ADDR_LEN * 3)
+                if (sp >= MMAC_ADDR_BUF_SIZE - MCAST_LINK_ADDR_LEN_MAX)
                 {
                     s = realloc(s, (++buf_segs) * MMAC_ADDR_BUF_SIZE);
                 }
                 strncpy(&s[sp], &addrstr[i * 2], 2);
                 sp += 2;
-                s[sp++] = (i < 5) ? ':' : ' ';
+                s[sp++] = (i < oktet_num - 1) ? ':' : ' ';
                 s[sp] = '\0';
             }
         }
     }
     fclose(fd);
+#undef MCAST_LINK_ADDR_LEN_MAX
 #endif
     *list = s;
     return 0;
