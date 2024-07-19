@@ -65,6 +65,7 @@ typedef struct tapi_rdma_perf_common_opts {
     te_optional_uintmax_t       iter_num;   /**< Number of exchanges. */
     tapi_job_opt_uint_t         rx_depth;   /**< Receive queue depth. */
     tapi_job_opt_uint_t         duration_s; /**< Test duration, seconds. */
+    te_bool                     wos;        /**< Wait before start RDMA ops. */
 } tapi_rdma_perf_common_opts;
 
 /** Options for latency tests. */
@@ -140,6 +141,7 @@ const tapi_rdma_perf_common_opts tapi_rdma_perf_cmn_opts_def = {
     .iter_num                          = TAPI_JOB_OPT_UINTMAX_UNDEF,
     .rx_depth                          = TAPI_JOB_OPT_UINT_UNDEF,
     .duration_s                        = TAPI_JOB_OPT_UINT_UNDEF,
+    .wos                               = FALSE,
 };
 
 /** Default values for options of latency RDMA perf tests. */
@@ -331,6 +333,17 @@ extern void tapi_rdma_perf_app_destroy(tapi_rdma_perf_app *app);
  * @sa tapi_rdma_perf_app_stop
  */
 extern te_errno tapi_rdma_perf_app_start(tapi_rdma_perf_app *app);
+
+/**
+ * Resume RDMA perf app.
+ *
+ * This can be used only if RDMA perf app runs with wait_on_start option.
+ *
+ * @param app             RDMA perf app context.
+ *
+ * @return Status code.
+ */
+extern te_errno tapi_rdma_perf_app_resume(tapi_rdma_perf_app *app);
 
 /**
  * Wait until RDMA perf client-specific app finishes its work.

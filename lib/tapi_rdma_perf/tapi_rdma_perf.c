@@ -44,6 +44,8 @@ typedef enum {
 struct tapi_rdma_perf_app {
     /** Job instance. */
     tapi_job_t                    *job;
+    /** Standard input channels. */
+    tapi_job_channel_t            *in_ch;
     /** Standart output channels. */
     tapi_job_channel_t            *out_chs[2];
     /** Factory used for the app intance. */
@@ -136,7 +138,8 @@ build_argv(const char *path, const tapi_rdma_perf_opts *opts,
         TAPI_JOB_OPT_UINT_T("--rx-depth=", true, NULL,
                             tapi_rdma_perf_common_opts, rx_depth),
         TAPI_JOB_OPT_UINT_T("--duration=", true, NULL,
-                            tapi_rdma_perf_common_opts, duration_s)
+                            tapi_rdma_perf_common_opts, duration_s),
+        TAPI_JOB_OPT_BOOL("--wait_on_start", tapi_rdma_perf_common_opts, wos)
     );
 
     if (is_client && opts->server_ip == NULL)
@@ -425,6 +428,22 @@ static const te_enum_map test_type_map[] = {
 
 /* See description in tapi_rdma_perf.h */
 te_errno
+tapi_rdma_perf_app_resume(tapi_rdma_perf_app *app)
+{
+    te_string resume_cmd = TE_STRING_BUF_INIT("\r");
+    te_errno rc = 0;
+
+    rc = tapi_job_send(app->in_ch, &resume_cmd);
+    if (rc != 0)
+        ERROR_VERDICT("Failed to resume %s: %rc",  app->name, rc);
+
+    INFO("Request for %s to resume was successfully sent", app->name);
+
+    return rc;
+}
+
+/* See description in tapi_rdma_perf.h */
+te_errno
 tapi_rdma_perf_app_init(tapi_job_factory_t *factory,
                         tapi_rdma_perf_opts *opts,
                         bool is_client,
@@ -479,7 +498,7 @@ tapi_rdma_perf_app_init(tapi_job_factory_t *factory,
     job_descr.argv = (const char **)handle->args.data.ptr;
     job_descr.env = NULL;
     job_descr.job_loc = &handle->job;
-    job_descr.stdin_loc = NULL;
+    job_descr.stdin_loc = &handle->in_ch;
     job_descr.stdout_loc = &handle->out_chs[0];
     job_descr.stderr_loc = &handle->out_chs[1];
     job_descr.filters = TAPI_JOB_SIMPLE_FILTERS(
