@@ -65,7 +65,7 @@ typedef struct tapi_rdma_perf_common_opts {
     te_optional_uintmax_t       iter_num;   /**< Number of exchanges. */
     tapi_job_opt_uint_t         rx_depth;   /**< Receive queue depth. */
     tapi_job_opt_uint_t         duration_s; /**< Test duration, seconds. */
-    te_bool                     wos;        /**< Wait before start RDMA ops. */
+    bool                        wos;        /**< Wait before start RDMA ops. */
 } tapi_rdma_perf_common_opts;
 
 /** Options for latency tests. */
@@ -141,7 +141,7 @@ const tapi_rdma_perf_common_opts tapi_rdma_perf_cmn_opts_def = {
     .iter_num                          = TAPI_JOB_OPT_UINTMAX_UNDEF,
     .rx_depth                          = TAPI_JOB_OPT_UINT_UNDEF,
     .duration_s                        = TAPI_JOB_OPT_UINT_UNDEF,
-    .wos                               = FALSE,
+    .wos                               = false,
 };
 
 /** Default values for options of latency RDMA perf tests. */
@@ -229,13 +229,17 @@ typedef struct tapi_rdma_perf_stats
     bool parse_error;
 } tapi_rdma_perf_stats;
 
+typedef struct tapi_rdma_perf_qps_info {
+    unsigned int qp_num;  /**< Number of Queue Pairs used by the test. */
+    int *qp_ids;          /**< Array with QP IDs. */
+} tapi_rdma_perf_qps_info;
+
 /** Performance test results structure. */
 typedef struct tapi_rdma_perf_results {
-    int qp; /**< Queue Pair Number used by the test. */
-    tapi_rdma_perf_stats stats; /**< Perftest stats report. */
+    tapi_rdma_perf_stats stats;        /**< Perftest stats report. */
 } tapi_rdma_perf_results;
 
-#define TAPI_RDMA_PERF_RESULTS_INIT { .qp = -1, .stats = { 0 } }
+#define TAPI_RDMA_PERF_RESULTS_INIT { .stats = { 0 } }
 
 /** RDMA perf context */
 typedef struct tapi_rdma_perf_app tapi_rdma_perf_app;
@@ -359,6 +363,41 @@ extern te_errno tapi_rdma_perf_app_resume(tapi_rdma_perf_app *app);
 extern te_errno tapi_rdma_perf_app_wait(tapi_rdma_perf_app *app,
                                         int timeout_s,
                                         tapi_rdma_perf_results *results);
+
+/**
+ * Get QP numbers from the perftest's output.
+ *
+ * Perftest provides information about RDMA resources before performing
+ * RDMA operations. It looks like the following:
+ * ```
+ * local address:  LID 0000 QPN 0x0004 PSN 0x290e66 RKey 0x000202
+ * VAddr 0x007f0292e1e000 GID:00:00:00:00:00:00:00:00:00:00:255:255:10:38:10:02
+ * local address:  LID 0000 QPN 0x0005 PSN 0xb0a28f RKey 0x000202
+ * VAddr 0x007f0292e1f000 GID:00:00:00:00:00:00:00:00:00:00:255:255:10:38:10:02
+ * ```
+ *
+ * The function looks for strings like the one above and obtains QPN
+ * using regular expressions.
+ *
+ * The function must be called only once and
+ * -  after perftest finished its work;
+ * -  after perftest started with the option --wait_on_start option;
+ *
+ * @param[in]  app        EDMA perf app context.
+ * @param[in]  opts       RDMA perf options.
+ * @param[out] qps_info   Information about all QPs.
+ *
+ * @note User must release @p qps_info memory after the call.
+ *
+ * @return Status code.
+ * @retval TE_EALREADY      QPs info was already requested.
+ * @retval TE_EAGAIN        Pertest is in an inappropriate state.
+ * @retval TE_EINVAL        Invalid input arguments.
+ * @retval @c 0             The result is successful.
+ */
+extern te_errno tapi_rdma_perf_qps_info_get(tapi_rdma_perf_app *app,
+                                            const tapi_rdma_perf_opts *opts,
+                                            tapi_rdma_perf_qps_info *qps_info);
 
 /**
  * Get CMD in string representation that will be used to run RDMA perf app.

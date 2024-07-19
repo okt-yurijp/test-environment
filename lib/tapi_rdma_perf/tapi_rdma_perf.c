@@ -56,7 +56,7 @@ struct tapi_rdma_perf_app {
     tapi_rdma_perf_report_type_t   report_type;
     /** Arguments that are used when running the tool. */
     te_vec                         args;
-    /** Channel for Queue Pair Number retrieval. */
+    /** Channel for Queue Pair Numbers retrieval. */
     tapi_job_channel_t            *qp;
     /** Channel to collect stats. */
     tapi_job_channel_t            *stats;
@@ -336,6 +336,69 @@ parse_stats(const char *stats_str, tapi_rdma_perf_report_type_t type,
     stats->parse_error = false;
 }
 
+te_errno
+tapi_rdma_perf_qps_info_get(tapi_rdma_perf_app *app,
+                            const tapi_rdma_perf_opts *opts,
+                            tapi_rdma_perf_qps_info *qps_info)
+{
+    bool              wait_on_start = opts->common.wos;
+    tapi_job_buffer_t buffer = TAPI_JOB_BUFFER_INIT;
+    unsigned int      requested_qp = 1;
+    te_errno          rc = 0;
+    unsigned int      i;
+
+    if (app == NULL || opts == NULL || qps_info == NULL)
+        return TE_RC(TE_TAPI, TE_EINVAL);
+
+    if (qps_info->qp_num != 0)
+    {
+        ERROR("Requesting QPs info multiple times is prohibited");
+        return TE_RC(TE_TAPI, TE_EALREADY);
+    }
+
+    if (opts->tst_type == TAPI_RDMA_PERF_TEST_BW &&
+        opts->bw.qp_num.defined != false)
+    {
+        requested_qp = opts->bw.qp_num.value;
+    }
+
+    if (tapi_job_is_running(app->job) && !wait_on_start){
+        ERROR("QPs info unavailable until finished without wait_on_start");
+        return TE_RC(TE_TAPI, TE_EAGAIN);
+    }
+
+    qps_info->qp_ids = TE_ALLOC(requested_qp * sizeof(*qps_info->qp_ids));
+
+    for (i = 0; i < requested_qp; i++)
+    {
+        rc = tapi_job_receive(TAPI_JOB_CHANNEL_SET(app->qp), TE_SEC2MS(5),
+                              &buffer);
+        if (rc != 0)
+        {
+            ERROR("Failed to receive QPN from perftest: %r", rc);
+            break;
+        }
+        else
+        {
+            rc = te_strtoi(buffer.data.ptr, 16, &qps_info->qp_ids[i]);
+            if (rc != 0)
+            {
+                ERROR("Failed to parse ID of %u QP '%s': %r",
+                      i + 1, buffer.data.ptr, rc);
+                qps_info->qp_ids[i] = -1;
+                break;
+            }
+        }
+
+        te_string_reset(&buffer.data);
+    }
+
+    qps_info->qp_num = i;
+    te_string_free(&buffer.data);
+
+    return 0;
+}
+
 /* See description in tapi_rdma_perf.h */
 te_errno
 tapi_rdma_perf_app_wait(tapi_rdma_perf_app *app, int timeout_s,
@@ -359,23 +422,6 @@ tapi_rdma_perf_app_wait(tapi_rdma_perf_app *app, int timeout_s,
 
     if (results != NULL)
     {
-        rc = tapi_job_receive(TAPI_JOB_CHANNEL_SET(app->qp), 0, &buffer);
-        if (rc != 0)
-        {
-            ERROR("Failed to receive QPN from perftest: %r", rc);
-        }
-        else
-        {
-            rc = te_strtoi(buffer.data.ptr, 16, &results->qp);
-            if (rc != 0)
-            {
-                ERROR("Failed to parse QPN '%s': %r", buffer.data.ptr, rc);
-                results->qp = -1;
-            }
-        }
-
-        te_string_reset(&buffer.data);
-
         rc = tapi_job_receive(TAPI_JOB_CHANNEL_SET(app->stats), 0, &buffer);
         if (rc != 0)
         {
