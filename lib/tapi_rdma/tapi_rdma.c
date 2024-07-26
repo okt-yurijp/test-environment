@@ -206,6 +206,12 @@ tapi_rdma_link_log_stats(tapi_rdma_link_stats_t *stats, const char *description,
     te_log_buf   *buf;
     bool          stats_printed = false;
 
+    if (stats == NULL)
+    {
+        ERROR("Tried to log NULL RDMA statistics");
+        return;
+    }
+
     buf = te_log_buf_alloc();
 
     te_log_buf_append(buf, "%s:\n", description);
