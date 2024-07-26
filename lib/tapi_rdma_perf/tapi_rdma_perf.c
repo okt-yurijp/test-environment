@@ -139,7 +139,9 @@ build_argv(const char *path, const tapi_rdma_perf_opts *opts,
                             tapi_rdma_perf_common_opts, rx_depth),
         TAPI_JOB_OPT_UINT_T("--duration=", true, NULL,
                             tapi_rdma_perf_common_opts, duration_s),
-        TAPI_JOB_OPT_BOOL("--wait_on_start", tapi_rdma_perf_common_opts, wos)
+        TAPI_JOB_OPT_BOOL("--wait_on_start", tapi_rdma_perf_common_opts, wos),
+        TAPI_JOB_OPT_BOOL("--ignore-cleanup-errors", tapi_rdma_perf_common_opts,
+                          ignore_cleanup_errors)
     );
 
     if (is_client && opts->server_ip == NULL)
@@ -500,6 +502,7 @@ tapi_rdma_perf_app_init(tapi_job_factory_t *factory,
     tapi_rdma_perf_app     *handle = NULL;
 
     const char *tx_depth_limit_str = getenv("TE_RDMA_PERFTEST_LIMIT_TX_DEPTH");
+    const char *ignore_cleanup_errors = getenv("TE_RDMA_PERFTEST_IGNORE_CLEANUP_ERRORS");
 
     if (factory == NULL || opts == NULL || app == NULL)
         return TE_RC(TE_TAPI, TE_EINVAL);
@@ -526,6 +529,9 @@ tapi_rdma_perf_app_init(tapi_job_factory_t *factory,
             opts->bw.tx_depth = TE_OPTIONAL_UINT_VAL(tx_depth_limit);
         }
     }
+
+    if (ignore_cleanup_errors != NULL && strcmp(ignore_cleanup_errors, "1") == 0)
+        opts->common.ignore_cleanup_errors = true;
 
     handle = TE_ALLOC(sizeof(*handle));
     switch (opts->tst_type)

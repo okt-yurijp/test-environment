@@ -66,6 +66,8 @@ typedef struct tapi_rdma_perf_common_opts {
     tapi_job_opt_uint_t         rx_depth;   /**< Receive queue depth. */
     tapi_job_opt_uint_t         duration_s; /**< Test duration, seconds. */
     bool                        wos;        /**< Wait before start RDMA ops. */
+    bool                        ignore_cleanup_errors;
+                                            /**< Ignore cleanup errors. */
 } tapi_rdma_perf_common_opts;
 
 /** Options for latency tests. */
