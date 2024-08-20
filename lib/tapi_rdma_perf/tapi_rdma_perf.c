@@ -104,6 +104,13 @@ static const te_enum_map tapi_perftet_atomic_type_map[] = {
     TE_ENUM_MAP_END
 };
 
+/* See description in tapi_rdma_perf.h */
+const char *
+tapi_rdma_perf_conn_str_get(tapi_rdma_perf_conn_type_t conn_type)
+{
+    return te_enum_map_from_value(tapi_perftet_conn_map, conn_type);
+}
+
 /**
  * Build command line arguments to run RDMA perf app.
  *

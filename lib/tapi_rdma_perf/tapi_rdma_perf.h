@@ -304,6 +304,16 @@ tapi_rdma_perf_def_opts_init(tapi_rdma_perf_opts *opts,
 }
 
 /**
+ * Get connection type in string representation.
+ *
+ * @param conn_type       RDMA connection type.
+ *
+ * @return String with connection type.
+ */
+extern const char * tapi_rdma_perf_conn_str_get(
+                        tapi_rdma_perf_conn_type_t conn_type);
+
+/**
  * Initiate RDMA perf app.
  *
  * @param[in]  factory    Job factory.
