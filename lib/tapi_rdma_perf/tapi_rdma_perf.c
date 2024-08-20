@@ -499,10 +499,11 @@ tapi_rdma_perf_app_resume(tapi_rdma_perf_app *app)
 
 /* See description in tapi_rdma_perf.h */
 te_errno
-tapi_rdma_perf_app_init(tapi_job_factory_t *factory,
-                        tapi_rdma_perf_opts *opts,
-                        bool is_client,
-                        tapi_rdma_perf_app **app)
+tapi_rdma_perf_app_init_with_env(tapi_job_factory_t *factory,
+                                 tapi_rdma_perf_opts *opts,
+                                 const char **env,
+                                 bool is_client,
+                                 tapi_rdma_perf_app **app)
 {
     te_errno                rc = 0;
     tapi_job_simple_desc_t  job_descr;
@@ -580,7 +581,7 @@ tapi_rdma_perf_app_init(tapi_job_factory_t *factory,
     job_descr.name = NULL;
     job_descr.program = TE_VEC_GET(char *, &handle->args, 0);
     job_descr.argv = (const char **)handle->args.data.ptr;
-    job_descr.env = NULL;
+    job_descr.env = env;
     job_descr.job_loc = &handle->job;
     job_descr.stdin_loc = &handle->in_ch;
     job_descr.stdout_loc = &handle->out_chs[0];
