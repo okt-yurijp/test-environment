@@ -92,6 +92,7 @@ static const te_enum_map tapi_perftet_conn_map[] = {
     {.name = "XRC", .value = TAPI_RDMA_PERF_CONN_XRC},
     {.name = "DC",  .value = TAPI_RDMA_PERF_CONN_DC},
     {.name = "SRD", .value = TAPI_RDMA_PERF_CONN_SRD},
+    {.name = "MRC", .value = TAPI_RDMA_PERF_CONN_MRC},
     TE_ENUM_MAP_END
 };
 

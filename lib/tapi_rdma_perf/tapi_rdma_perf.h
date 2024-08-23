@@ -45,6 +45,7 @@ typedef enum {
     TAPI_RDMA_PERF_CONN_XRC,
     TAPI_RDMA_PERF_CONN_DC,
     TAPI_RDMA_PERF_CONN_SRD,
+    TAPI_RDMA_PERF_CONN_MRC,
 } tapi_rdma_perf_conn_type_t;
 
 /** RDMA atomic operations type. */
