@@ -48,7 +48,6 @@ te_errno
 tapi_gtest_init(tapi_gtest *gtest, tapi_job_factory_t *factory)
 {
     te_errno rc;
-    te_vec gtest_argv = TE_VEC_INIT(const char *);
     tapi_job_simple_desc_t desc;
     te_string buf = TE_STRING_INIT;
 
@@ -82,13 +81,14 @@ tapi_gtest_init(tapi_gtest *gtest, tapi_job_factory_t *factory)
         return rc;
     }
     gtest->opts.gtest_filter = buf.ptr;
-    if ((rc = gtest_build_argv(gtest, &gtest_argv)) != 0)
+    gtest->args = TE_VEC_INIT(const char *);
+    rc = gtest_build_argv(gtest, &gtest->args);
+    if (rc != 0)
         return rc;
 
-    desc.argv = (const char **) gtest_argv.data.ptr;
+    desc.argv = (const char **) gtest->args.data.ptr;
     rc = tapi_job_simple_create(factory, &desc);
 
-    te_vec_deep_free(&gtest_argv);
     return rc;
 }
 
@@ -170,6 +170,7 @@ tapi_gtest_fini(tapi_gtest *gtest)
     te_errno rc;
     const int term_timeout_ms = -1;
 
+    te_vec_deep_free(&gtest->args);
     if (gtest == NULL || gtest->impl.job == NULL)
         return 0;
 
@@ -177,4 +178,31 @@ tapi_gtest_fini(tapi_gtest *gtest)
         return rc;
 
     return tapi_job_destroy(gtest->impl.job, term_timeout_ms);
+}
+
+te_errno
+tapi_gtest_get_cmd_str(tapi_gtest *gtest, te_string *cmd)
+{
+    char **iter;
+    te_errno rc;
+
+    if (cmd == NULL)
+        return TE_EINVAL;
+
+    te_string_reset(cmd);
+
+    TE_VEC_FOREACH(&(gtest->args), iter)
+    {
+        if (*iter == NULL)
+            break;
+
+        rc = te_string_append(cmd, "%s ", *iter);
+        if (rc != 0)
+        {
+            te_string_free(&cmd);
+            return rc;
+        }
+    }
+
+    return 0;
 }
