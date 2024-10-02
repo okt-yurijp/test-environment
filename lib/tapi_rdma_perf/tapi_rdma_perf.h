@@ -61,6 +61,7 @@ typedef struct tapi_rdma_perf_common_opts {
     tapi_rdma_perf_conn_type_t  conn_type;  /**< Connection type. */
     const char                 *ib_dev;     /**< IB device name. */
     tapi_job_opt_uint_t         ib_port;    /**< IB device network port. */
+    tapi_job_opt_uint_t         gid_idx;    /**< IB GID index. */
     te_optional_uintmax_t       msg_size;   /**< Size of message to
                                                  exchange. */
     te_optional_uintmax_t       iter_num;   /**< Number of exchanges. */
@@ -140,6 +141,7 @@ const tapi_rdma_perf_common_opts tapi_rdma_perf_cmn_opts_def = {
     .conn_type                         = TAPI_JOB_OPT_ENUM_UNDEF,
     .ib_dev                            = NULL,
     .ib_port                           = TAPI_JOB_OPT_UINT_UNDEF,
+    .gid_idx                           = TAPI_JOB_OPT_UINT_UNDEF,
     .msg_size                          = TAPI_JOB_OPT_UINTMAX_UNDEF,
     .iter_num                          = TAPI_JOB_OPT_UINTMAX_UNDEF,
     .rx_depth                          = TAPI_JOB_OPT_UINT_UNDEF,
