@@ -135,58 +135,25 @@ typedef struct tapi_rdma_perf_opts {
 } tapi_rdma_perf_opts;
 
 /** Default values for common options of RDMA perf. */
-const tapi_rdma_perf_common_opts tapi_rdma_perf_cmn_opts_def = {
-    .port                              = TAPI_JOB_OPT_UINT_UNDEF,
-    .mtu                               = TAPI_JOB_OPT_UINT_UNDEF,
-    .conn_type                         = TAPI_JOB_OPT_ENUM_UNDEF,
-    .ib_dev                            = NULL,
-    .ib_port                           = TAPI_JOB_OPT_UINT_UNDEF,
-    .gid_idx                           = TAPI_JOB_OPT_UINT_UNDEF,
-    .msg_size                          = TAPI_JOB_OPT_UINTMAX_UNDEF,
-    .iter_num                          = TAPI_JOB_OPT_UINTMAX_UNDEF,
-    .rx_depth                          = TAPI_JOB_OPT_UINT_UNDEF,
-    .duration_s                        = TAPI_JOB_OPT_UINT_UNDEF,
-    .wos                               = false,
-};
+extern const tapi_rdma_perf_common_opts tapi_rdma_perf_cmn_opts_def;
 
 /** Default values for options of latency RDMA perf tests. */
-const tapi_rdma_perf_lat_opts tapi_rdma_perf_lat_opts_def = {
-    .report_cycles                     = false,
-    .report_histogram                  = false,
-    .report_unsorted                   = false,
-};
+extern const tapi_rdma_perf_lat_opts tapi_rdma_perf_lat_opts_def;
 
 /** Default values for options of BW RDMA perf tests. */
-const tapi_rdma_perf_bw_opts tapi_rdma_perf_bw_opts_def = {
-    .bi_dir                            = false,
-    .tx_depth                          = TAPI_JOB_OPT_UINT_UNDEF,
-    .dualport                          = false,
-    .duration_s                        = TAPI_JOB_OPT_UINT_UNDEF,
-    .qp_num                            = TAPI_JOB_OPT_UINT_UNDEF,
-};
+extern const tapi_rdma_perf_bw_opts tapi_rdma_perf_bw_opts_def;
 
 /** Default values for options of RDMA perf tests with SEND transactions. */
-const tapi_rdma_perf_send_opts tapi_rdma_perf_send_opts_def = {
-    .rx_depth                          = TAPI_JOB_OPT_UINT_UNDEF,
-    .mcast_qps_num                     = TAPI_JOB_OPT_UINT_UNDEF,
-    .mcast_gid                         = TAPI_JOB_OPT_UINT_UNDEF,
-};
+extern const tapi_rdma_perf_send_opts tapi_rdma_perf_send_opts_def;
 
 /** Default values for options of RDMA perf tests with WRITE transactions. */
-const tapi_rdma_perf_write_opts tapi_rdma_perf_write_opts_def = {
-    .write_with_imm                    = false,
-};
+extern const tapi_rdma_perf_write_opts tapi_rdma_perf_write_opts_def;
 
 /** Default values for options of RDMA perf tests with READ transactions. */
-const tapi_rdma_perf_read_opts tapi_rdma_perf_read_opts_def = {
-    .outs_num                          = TAPI_JOB_OPT_UINT_UNDEF,
-};
+extern const tapi_rdma_perf_read_opts tapi_rdma_perf_read_opts_def;
 
 /** Default values for options of RDMA perf tests with ATOMIC transactions. */
-const tapi_rdma_perf_atomic_opts tapi_rdma_perf_atomic_opts_def = {
-    .type                              = TAPI_JOB_OPT_ENUM_UNDEF,
-    .outs_num                          = TAPI_JOB_OPT_UINT_UNDEF,
-};
+extern const tapi_rdma_perf_atomic_opts tapi_rdma_perf_atomic_opts_def;
 
 /** Statistics for BW tests. */
 typedef struct tapi_rdma_perf_bw_stats {
