@@ -787,8 +787,6 @@ tapi_rdma_perf_mi_report(tapi_rdma_perf_app *app, bool is_client,
     te_mi_logger_add_meas_key(logger, NULL, "side", "%s",
                               is_client ? "client" : "server");
     te_mi_logger_add_meas_key(logger, NULL, "bytes", "%lu", stats->bytes);
-    te_mi_logger_add_meas_key(logger, NULL, "iterations", "%lu",
-                              stats->iterations);
 
     switch (type)
     {
