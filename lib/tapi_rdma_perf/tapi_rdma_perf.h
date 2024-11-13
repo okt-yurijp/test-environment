@@ -87,6 +87,8 @@ typedef struct tapi_rdma_perf_bw_opts {
     bool             dualport;      /**< Use dual-port mode. */
     tapi_job_opt_uint_t duration_s; /**< Test duration, seconds. */
     tapi_job_opt_uint_t qp_num;     /**< Num of QPs running in the process. */
+    bool report_gbits;              /**< Report Max/Average BW of test
+                                         in Gbit/sec. */
 } tapi_rdma_perf_bw_opts;
 
 /** Options for test with SEND transactions. */
@@ -158,9 +160,11 @@ extern const tapi_rdma_perf_atomic_opts tapi_rdma_perf_atomic_opts_def;
 
 /** Statistics for BW tests. */
 typedef struct tapi_rdma_perf_bw_stats {
-    /** BW peak in MB/sec.*/
+    /** Report Max/Average BW of test in Gbit/sec (instead of MB/sec). */
+    bool report_gbits;
+    /** BW peak. */
     double peak;
-    /** BW average in MB/sec. */
+    /** BW average. */
     double average;
     /** MsgRate in Mpps. */
     double msg_rate;
