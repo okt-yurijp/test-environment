@@ -70,6 +70,10 @@ enum {
 static const test_info * find_test_info(const tests_info *ti,
                                         const char *name);
 
+static te_errno alloc_and_get_var_arg(xmlNodePtr node, bool is_var,
+                                      const test_session *session,
+                                      test_vars_args *list);
+
 static te_errno alloc_and_get_run_item(xmlNodePtr node, tester_cfg *cfg,
                                        unsigned int opts,
                                        run_item_role role,
@@ -996,6 +1000,152 @@ get_test_attrs(xmlNodePtr node, test_attrs *attrs)
     return 0;
 }
 
+/**
+ * Get default argument values.
+ *
+ * @param node        XML node with script call description
+ * @param session     Location for session description
+ *
+ * @return Status code.
+ */
+static te_errno
+get_defaults(xmlNodePtr node, const test_session *session)
+{
+    te_errno        rc;
+    test_def_arg   *def_arg;
+    test_def_arg   *darg;
+    char           *defaults_name;
+
+    def_arg = TE_ALLOC(sizeof(*def_arg));
+    TAILQ_INIT(&def_arg->args);
+
+    defaults_name = XML2CHAR(xmlGetProp(node, CONST_CHAR2XML("name")));
+    if (defaults_name == NULL)
+    {
+        ERROR("'name' attribute is missing in run-template");
+        return TE_RC(TE_TESTER, TE_EINVAL);
+    }
+    def_arg->name = defaults_name;
+
+    node = xmlNodeChildren(node);
+    if (xmlStrcmp(node->name, CONST_CHAR2XML("script")) == 0)
+    {
+        def_arg->script = XML2CHAR(xmlGetProp(node, CONST_CHAR2XML("name")));
+        if (def_arg->script == NULL)
+        {
+            ERROR("'name' attribute is missing in script in run-template");
+            return TE_RC(TE_TESTER, TE_EINVAL);
+        }
+        node = xmlNodeNext(node);
+    }
+
+    /* Get information about arguments */
+    while (node != NULL &&
+           xmlStrcmp(node->name, CONST_CHAR2XML("arg")) == 0)
+    {
+        rc = alloc_and_get_var_arg(node, false, session, &def_arg->args);
+        if (rc != 0)
+        {
+            ERROR("Processing default argument values with template name '%s' "
+                  "failed: %r", defaults_name, rc);
+            return rc;
+        }
+        node = xmlNodeNext(node);
+    }
+
+    if (node != NULL)
+    {
+        ERROR("Unexpected element '%s' in default argument values with "
+              "template name '%s' call description", XML2CHAR(node->name),
+              defaults_name);
+        return TE_RC(TE_TESTER, TE_EINVAL);
+    }
+
+    TAILQ_FOREACH(darg, &tester_global_context.def_args, links)
+    {
+        if (strcmp(darg->name, def_arg->name) == 0)
+        {
+            ERROR("Default value template name '%s' is not unique.",
+                  def_arg->name);
+            return TE_RC(TE_TESTER, TE_EINVAL);
+        }
+    }
+    TAILQ_INSERT_TAIL(&tester_global_context.def_args, def_arg, links);
+    VERB("Got default values with template name '%s'", defaults_name);
+
+    return 0;
+}
+
+/**
+ * Get default argument by template name.
+ *
+ * @param name      Template name
+ * @param def_arg   Location of default argument structure
+ *
+ * @return Status code.
+ */
+static te_errno
+get_default_arg_by_name(const char *name, test_def_arg **def_arg)
+{
+    test_def_arg *darg;
+
+    TAILQ_FOREACH(darg, &tester_global_context.def_args, links)
+    {
+        if (strcmp(darg->name, name) == 0)
+        {
+            *def_arg = darg;
+            return 0;
+        }
+    }
+    ERROR("There is no default argument template with name '%s'", name);
+    return TE_RC(TE_TESTER, TE_ENOENT);
+}
+
+/**
+ * Add default argument values to run item argument list.
+ *
+ * @param name    Default value template name
+ * @param list    List of run item arguments
+ *
+ * @return Status code.
+ */
+static te_errno
+add_default_arg(const char *name, test_vars_args *list)
+{
+    te_errno        rc;
+    test_def_arg   *def_arg = NULL;
+    test_var_arg   *arg;
+    test_var_arg   *darg;
+    test_var_arg   *p;
+
+    rc = get_default_arg_by_name(name, &def_arg);
+    if (rc != 0)
+        return rc;
+
+    TAILQ_FOREACH(darg, &def_arg->args, links)
+    {
+        bool    found = false;
+
+        TAILQ_FOREACH(arg, list, links)
+        {
+            if (arg->variable)
+                continue;
+            if (strcmp(arg->name, darg->name) == 0)
+            {
+                found = true;
+                break;
+            }
+        }
+        if (found)
+            continue;
+
+        p = TE_MEMDUP(darg, sizeof(*darg));
+        p->def_arg = true;
+        TAILQ_INSERT_TAIL(list, p, links);
+    }
+
+    return 0;
+}
 
 /**
  * Get script call description.
@@ -1013,9 +1163,18 @@ get_script(xmlNodePtr node, tester_cfg *cfg, test_script *script)
     const test_info    *ti;
     bool                objective_found = false;
     bool                execute_found = false;
+    test_def_arg       *darg = NULL;
 
     /* 'name' is mandatory */
     script->name = XML2CHAR(xmlGetProp(node, CONST_CHAR2XML("name")));
+    if (script->templ != NULL && script->name == NULL)
+    {
+        rc = get_default_arg_by_name(script->templ, &darg);
+        if (rc != 0)
+            return rc;
+        if (darg->script != NULL)
+            script->name = strdup(darg->script);
+    }
     if (script->name == NULL)
     {
         ERROR("'name' attribute is missing in script call description");
@@ -1856,6 +2015,12 @@ get_session(xmlNodePtr node, tester_cfg *cfg, const test_session *parent,
         }
         node = xmlNodeNext(node);
     }
+    if (session->templ != NULL)
+    {
+        rc = add_default_arg(session->templ, &session->vars);
+        if (rc != 0)
+            return rc;
+    }
 
     /* Information about requirements is optional */
     rc = get_requirements(&node, &session->reqs, true);
@@ -2025,6 +2190,7 @@ alloc_and_get_run_item(xmlNodePtr node, tester_cfg *cfg, unsigned int opts,
 {
     run_item    *p;
     te_errno     rc;
+    char        *templ = NULL;
 
     assert((runs == NULL) != (p_run == NULL));
     p = TE_ALLOC(sizeof(*p));
@@ -2046,6 +2212,9 @@ alloc_and_get_run_item(xmlNodePtr node, tester_cfg *cfg, unsigned int opts,
     {
         *p_run = p;
     }
+
+    /* 'template' is optional */
+    templ = XML2CHAR(xmlGetProp(node, CONST_CHAR2XML("template")));
 
     if (~opts & TESTER_RUN_ITEM_SERVICE)
     {
@@ -2108,6 +2277,7 @@ alloc_and_get_run_item(xmlNodePtr node, tester_cfg *cfg, unsigned int opts,
     {
         p->type = RUN_ITEM_SCRIPT;
         TAILQ_INIT(&p->u.script.reqs);
+        p->u.script.templ = templ == NULL ? session-> templ : templ;
         rc = get_script(node, cfg, &p->u.script);
         if (rc != 0)
             return rc;
@@ -2117,6 +2287,7 @@ alloc_and_get_run_item(xmlNodePtr node, tester_cfg *cfg, unsigned int opts,
         p->type = RUN_ITEM_SESSION;
         TAILQ_INIT(&p->u.session.vars);
         TAILQ_INIT(&p->u.session.run_items);
+        p->u.session.templ = templ;
         rc = get_session(node, cfg, session, &p->u.session, p);
         if (rc != 0)
             return rc;
@@ -2149,6 +2320,12 @@ alloc_and_get_run_item(xmlNodePtr node, tester_cfg *cfg, unsigned int opts,
             return rc;
         }
         node = xmlNodeNext(node);
+    }
+    if (p->type == RUN_ITEM_SCRIPT && templ != NULL)
+    {
+        rc = add_default_arg(templ, &p->args);
+        if (rc != 0)
+            return rc;
     }
 
     if (node != NULL)
@@ -2254,6 +2431,16 @@ get_test_package(xmlNodePtr root, tester_cfg *cfg,
     {
         ERROR("Failed to get information about Test Package requirements");
         return rc;
+    }
+
+    /* Get optional default variables */
+    while (node != NULL &&
+           xmlStrcmp(node->name, CONST_CHAR2XML("run-template")) == 0)
+    {
+        rc = get_defaults(node, session);
+        if (rc != 0)
+            return rc;
+        node = xmlNodeNext(node);
     }
 
     if (node != NULL &&
@@ -2940,9 +3127,12 @@ test_value_types_free(test_value_types *types)
 static void
 test_var_arg_free(test_var_arg *p)
 {
-    free(p->name);
-    test_var_arg_values_free(&p->values);
-    free(p->list);
+    if (!p->def_arg)
+    {
+        free(p->name);
+        test_var_arg_values_free(&p->values);
+        free(p->list);
+    }
     free(p);
 }
 
@@ -3099,5 +3289,26 @@ tester_cfgs_free(tester_cfgs *cfgs)
         TAILQ_REMOVE(&cfgs->head, cfg, links);
         cfgs->total_iters -= cfg->total_iters;
         tester_cfg_free(cfg);
+    }
+}
+
+static void
+tester_def_arg_free(test_def_arg *def_arg)
+{
+    free(def_arg->name);
+    free(def_arg->script);
+    test_vars_args_free(&def_arg->args);
+    free(def_arg);
+}
+
+void
+tester_def_args_free(test_def_args *def_args)
+{
+    test_def_arg  *def_arg;
+
+    while ((def_arg = TAILQ_FIRST(def_args)) != NULL)
+    {
+        TAILQ_REMOVE(def_args, def_arg, links);
+        tester_def_arg_free(def_arg);
     }
 }

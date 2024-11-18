@@ -87,6 +87,7 @@ tester_global_init(tester_global *global)
     TAILQ_INIT(&global->suites);
     TAILQ_INIT(&global->paths);
     TAILQ_INIT(&global->reqs);
+    TAILQ_INIT(&global->def_args);
 
     global->verdict = NULL;
 
@@ -125,6 +126,7 @@ tester_global_free(tester_global *global)
 #endif
     scenario_free(&global->scenario);
     free_cmd_monitors(&global->cmd_monitors);
+    tester_def_args_free(&global->def_args);
 }
 
 

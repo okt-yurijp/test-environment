@@ -164,6 +164,7 @@ typedef struct test_script {
     char               *objective;  /**< Objective */
     char               *page;       /**< HTML page with documentation */
     char               *execute;    /**< Full path to executable */
+    char               *templ;      /**< Default value template name */
     test_requirements   reqs;       /**< Set of requirements */
     test_attrs          attrs;      /**< Test attributes */
 } test_script;
@@ -186,10 +187,23 @@ typedef struct test_var_arg {
     bool variable;  /**< Is variable */
     bool global;    /**< In case it's a variable - is it
                                            global? */
+    bool def_arg;   /**< Is it a default argument */
 } test_var_arg;
 
 /** List of test session variables */
 typedef TAILQ_HEAD(test_vars_args, test_var_arg) test_vars_args;
+
+/** Tester global default arguments */
+typedef struct test_def_arg {
+    TAILQ_ENTRY(test_def_arg) links;  /**< List links */
+    char                     *name;   /**< Name for default values */
+    char                     *script; /**< Script name */
+    test_vars_args            args;   /**< Arguments */
+} test_def_arg;
+
+/** Head of the list of default values for runs */
+typedef TAILQ_HEAD(test_def_args, test_def_arg)
+    test_def_args;
 
 /* Forwards */
 struct run_item;
@@ -217,6 +231,7 @@ struct test_session {
     run_items           run_items;      /**< List of run items */
     bool simultaneous;   /**< Run all items simultaneously */
     unsigned int        flags;          /**< Flags */
+    char               *templ;          /**< Default value template name */
 };
 
 
@@ -619,6 +634,13 @@ extern te_errno tester_prepare_configs(tester_cfgs *cfgs);
  * @param cfgs          List of Tester configurations to be freed
  */
 extern void tester_cfgs_free(tester_cfgs *cfgs);
+
+/**
+ * Free default arguments.
+ *
+ * @param def_args          List of default arguments
+ */
+extern void tester_def_args_free(test_def_args *def_args);
 
 
 /**

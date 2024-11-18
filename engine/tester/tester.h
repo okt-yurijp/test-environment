@@ -39,6 +39,7 @@ typedef struct tester_global {
     testing_scenario    scenario;   /**< Testing scenario */
     test_requirements   reqs;       /**< List of requirements known by
                                      *   the tester */
+    test_def_args       def_args;   /**< List of default argument templates */
     char               *verdict;    /**< Verdict to stop tester run on */
 
     /** Percentage of all test iterations to choose randomly */
