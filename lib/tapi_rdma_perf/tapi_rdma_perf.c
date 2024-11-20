@@ -66,6 +66,8 @@ const tapi_rdma_perf_send_opts tapi_rdma_perf_send_opts_def = {
     .rx_depth                          = TAPI_JOB_OPT_UINT_UNDEF,
     .mcast_qps_num                     = TAPI_JOB_OPT_UINT_UNDEF,
     .mcast_gid                         = TAPI_JOB_OPT_UINT_UNDEF,
+    .write_imm                         = TAPI_JOB_OPT_UINT_UNDEF,
+    .send_imm                          = TAPI_JOB_OPT_UINT_UNDEF,
 };
 
 /** Default values for options of RDMA perf tests with WRITE transactions. */
@@ -265,6 +267,10 @@ build_argv(const char *path, const tapi_rdma_perf_opts *opts,
 
     switch (opts->op_type)
     {
+        case TAPI_RDMA_PERF_OP_SEND_IMM:
+            /*@fallthrough@*/
+        case TAPI_RDMA_PERF_OP_WRITE_IMM:
+            /*@fallthrough@*/
         case TAPI_RDMA_PERF_OP_SEND:
         {
             const tapi_job_opt_bind send_opt_binds[] = TAPI_JOB_OPT_SET(
@@ -273,7 +279,11 @@ build_argv(const char *path, const tapi_rdma_perf_opts *opts,
                 TAPI_JOB_OPT_UINT_T("--mcg=", true, NULL,
                                     tapi_rdma_perf_send_opts, mcast_qps_num),
                 TAPI_JOB_OPT_UINT_T("--MGID=", true, NULL,
-                                    tapi_rdma_perf_send_opts, mcast_gid)
+                                    tapi_rdma_perf_send_opts, mcast_gid),
+                TAPI_JOB_OPT_UINT_T("--write_imm=", true, NULL,
+                                    tapi_rdma_perf_send_opts, write_imm),
+                TAPI_JOB_OPT_UINT_T("--send_imm=", true, NULL,
+                                    tapi_rdma_perf_send_opts, send_imm)
             );
 
             rc = tapi_job_opt_append_args(send_opt_binds, &opts->send, argv);
@@ -524,9 +534,14 @@ tapi_rdma_perf_app_wait(tapi_rdma_perf_app *app, int timeout_s,
     return 0;
 }
 
-/* Mapping of RDMA perf transaction types to its string representation. */
-static const te_enum_map op_type_map[] = {
+/*
+ * One-direction mapping of RDMA perf transaction types to
+ * the string representation of the perftest tool's part name to use.
+ */
+static const te_enum_map op_type_tool_name_map[] = {
     {.name = "send",   .value = TAPI_RDMA_PERF_OP_SEND},
+    {.name = "send",   .value = TAPI_RDMA_PERF_OP_SEND_IMM},
+    {.name = "send",   .value = TAPI_RDMA_PERF_OP_WRITE_IMM},
     {.name = "write",  .value = TAPI_RDMA_PERF_OP_WRITE},
     {.name = "read",   .value = TAPI_RDMA_PERF_OP_READ},
     {.name = "atomic", .value = TAPI_RDMA_PERF_OP_ATOMIC},
@@ -624,8 +639,24 @@ tapi_rdma_perf_app_init_with_env(tapi_job_factory_t *factory,
     handle->args = TE_VEC_INIT(char *);
 
     TE_SPRINTF(handle->name, "ib_%s_%s",
-               te_enum_map_from_value(op_type_map, opts->op_type),
+               te_enum_map_from_value(op_type_tool_name_map, opts->op_type),
                te_enum_map_from_value(test_type_map, opts->tst_type));
+
+    /*
+     * If user requested operations with IMM data but didn't specified
+     * it, use zero as default value.
+     */
+    if (opts->op_type == TAPI_RDMA_PERF_OP_SEND_IMM &&
+        !opts->send.send_imm.defined)
+    {
+        opts->send.send_imm = TE_OPTIONAL_UINT_VAL(0);
+    }
+
+    if (opts->op_type == TAPI_RDMA_PERF_OP_WRITE_IMM &&
+        !opts->send.write_imm.defined)
+    {
+        opts->send.write_imm = TE_OPTIONAL_UINT_VAL(0);
+    }
 
     rc = build_argv(handle->name, opts, is_client, &handle->args);
     if (rc != 0)

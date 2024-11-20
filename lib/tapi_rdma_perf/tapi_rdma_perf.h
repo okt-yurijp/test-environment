@@ -27,7 +27,9 @@ extern "C" {
 /** RDMA transaction type to test. */
 typedef enum {
     TAPI_RDMA_PERF_OP_SEND,
+    TAPI_RDMA_PERF_OP_SEND_IMM,
     TAPI_RDMA_PERF_OP_WRITE,
+    TAPI_RDMA_PERF_OP_WRITE_IMM,
     TAPI_RDMA_PERF_OP_READ,
     TAPI_RDMA_PERF_OP_ATOMIC,
 } tapi_rdma_perf_op_type_t;
@@ -97,6 +99,10 @@ typedef struct tapi_rdma_perf_send_opts {
     tapi_job_opt_uint_t mcast_qps_num; /**< Send messages to multicast group
                                             with qps number attached to it. */
     tapi_job_opt_uint_t mcast_gid;     /**< Group MGID for multicast case. */
+    tapi_job_opt_uint_t write_imm;     /**< Post write with immediate data
+                                            value. */
+    tapi_job_opt_uint_t send_imm;      /**< Post send with immediate data
+                                            value. */
 } tapi_rdma_perf_send_opts;
 
 /** Options for test with WRITE transactions. */
@@ -257,6 +263,10 @@ tapi_rdma_perf_def_opts_init(tapi_rdma_perf_opts *opts,
 
     switch (op_type)
     {
+        case TAPI_RDMA_PERF_OP_SEND_IMM:
+            /*@fallthrough@*/
+        case TAPI_RDMA_PERF_OP_WRITE_IMM:
+            /*@fallthrough@*/
         case TAPI_RDMA_PERF_OP_SEND:
             opts->send = tapi_rdma_perf_send_opts_def;
             break;
