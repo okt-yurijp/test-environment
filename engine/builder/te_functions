@@ -313,3 +313,42 @@ te_hostname2shname() {
     '
 }
 
+te_get_meson_path() {
+    local p="$1"; shift
+    local parms_var="${p}_PARMS"
+    local parms_list="${!parms_var}"
+    local meson_path=
+
+    for parm in ${parms_list} ; do
+        case ${parm} in
+            MESON=*)
+                meson_path="${parm#MESON=}" ;;
+            *)
+        esac
+    done
+
+    if test -z "${meson_path}"; then
+        meson_path="meson"
+    fi
+    echo "${meson_path}"
+}
+
+te_get_ninja_path() {
+    local p="$1"; shift
+    local parms_var="${p}_PARMS"
+    local parms_list="${!parms_var}"
+    local ninja_path=
+
+    for parm in ${parms_list} ; do
+        case ${parm} in
+            NINJA=*)
+                ninja_path="${parm#NINJA=}" ;;
+            *)
+        esac
+    done
+
+    if test -z "${ninja_path}"; then
+        ninja_path="ninja"
+    fi
+    echo "${ninja_path}"
+}

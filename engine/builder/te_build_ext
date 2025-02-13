@@ -51,6 +51,8 @@ declare envvars=
 declare tce=
 declare build_meson=false
 declare bin=
+declare meson_path=
+declare ninja_path=
 
 for arg; do
     case "$arg" in
@@ -117,6 +119,12 @@ for arg; do
         --bin=*)
             bin="${arg#--bin=}"
             ;;
+        --meson-path=*)
+            meson_path="${arg#--meson-path=}"
+            ;;
+        --ninja-path=*)
+            ninja_path="${arg#--ninja-path=}"
+            ;;
         *)
             echo "Invalid option '$arg'" >&2
             exit 1
@@ -144,6 +152,7 @@ tecppflags="$tecppflags -I$prefix/$platform/include"
 for v in $envvars; do
         exports="$exports export $v=\"${!v}\"; "
 done
+
 
 (
     if test -n "${prepare}" ; then
@@ -177,6 +186,8 @@ done
                           export TE_TA_TYPES=\"$tatypes\" ;
                           export TE_AGENTS_INST=\"$prefix/agents\" ;
                       fi ;
+                      export TE_PLATFORM_MESON_PATH=\"$meson_path\" ;
+                      export TE_PLATFORM_NINJA_PATH=\"$ninja_path\" ;
                       ${exports}
                       $build"
 )

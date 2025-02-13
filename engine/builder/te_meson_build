@@ -529,6 +529,12 @@ generate_config_file() {
                 strip="${parm#STRIP=}" ;;
             PKG_CONFIG=*)
                 pkgconfig="${parm#PKG_CONFIG=}" ;;
+            MESON=*)
+                :
+                ;;
+            NINJA=*)
+                :
+                ;;
             *)
                 others="${others} ${parm}" ;;
         esac
