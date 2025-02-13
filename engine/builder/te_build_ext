@@ -53,6 +53,7 @@ declare build_meson=false
 declare bin=
 declare meson_path=
 declare ninja_path=
+declare native_file=
 
 for arg; do
     case "$arg" in
@@ -125,6 +126,9 @@ for arg; do
         --ninja-path=*)
             ninja_path="${arg#--ninja-path=}"
             ;;
+        --native-file=*)
+            native_file="${arg#--native-file=}"
+            ;;
         *)
             echo "Invalid option '$arg'" >&2
             exit 1
@@ -188,6 +192,7 @@ done
                       fi ;
                       export TE_PLATFORM_MESON_PATH=\"$meson_path\" ;
                       export TE_PLATFORM_NINJA_PATH=\"$ninja_path\" ;
+                      export TE_PLATFORM_NATIVE_FILE=\"${native_file}\" ;
                       ${exports}
                       $build"
 )

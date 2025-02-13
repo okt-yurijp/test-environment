@@ -546,6 +546,11 @@ generate_config_file() {
         warning "Unsupported platform parameters:${others}"
     fi
 
+    if test -f "${conffile}"; then
+        rm $conffile
+        echo "Remove existing meson config file"
+    fi
+
     if test -z "${host}${cc}${cpp}${ld}${ar}${as}${strip}${pkg_config}${pkgconfig_path}" ; then
         return
     fi
@@ -560,13 +565,13 @@ generate_config_file() {
             test -n "$as" && echo "as = '${as}'" >> $conffile
             test -n "$strip" && echo "strip = '${strip}'" >> $conffile
             test -n "$pkgconfig" && echo "pkgconfig = '${pkgconfig}'" >> $conffile
-            meson_args="${meson_args} --native-file=${conffile}"
         fi
 
         if test -n "$pkgconfig_path"; then
             echo "[paths]" >> $conffile
             echo "pkg_config_path = '${pkgconfig_path}'" >> $conffile
         fi
+        meson_args="${meson_args} --native-file=${conffile}"
         return
     fi
 

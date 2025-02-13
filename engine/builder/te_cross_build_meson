@@ -125,6 +125,10 @@ make_workspace() {
     # Make source workspace
     mk_platform_src "${p}" "${ws}"/src "${rsync}"
 
+    if test -f "${TE_BUILD}/${p}.meson_conf"; then
+        rsync_to "${p}" "${TE_BUILD}/${p}.meson_conf" "${ws}/meson.ini"
+    fi
+
     # If non-local build, sync build directory
     if test "${ws}" != . ; then
         if test -d build ; then
@@ -208,9 +212,14 @@ build_ext() {
     declare -a extra_sync_args
     local meson_path
     local ninja_path
+    local native_file
 
     meson_path=$(te_get_meson_path ${p})
     ninja_path=$(te_get_ninja_path ${p})
+
+    if test -f "${ws}/meson.ini"; then
+        native_file="--native-file=${ws}/meson.ini"
+    fi
 
     local ext_inst="${ws}/destdir${TE_INSTALL}"
     for pext in ${!pexts}; do
@@ -259,7 +268,7 @@ build_ext() {
             --envvars="${!pextenv} ${USE_ENV_CCACHE_DIR}" \
             --meson-path="${meson_path}" \
             --ninja-path="${ninja_path}" \
-            $enable_tce --build-meson || exit 1
+            $enable_tce $native_file --build-meson || exit 1
 
         rsync_from "$p" "${ws_ext_builddir}/" "${local_ext_builddir}"
     done
@@ -275,9 +284,14 @@ build_agent_apps() {
     declare -a extra_sync_args
     local meson_path
     local ninja_path
+    local native_file
 
     meson_path=$(te_get_meson_path ${p})
     ninja_path=$(te_get_ninja_path ${p})
+
+    if test -f "${ws}/meson.ini"; then
+        native_file="--native-file=${ws}/meson.ini"
+    fi
 
     local app_inst="${ws}/destdir${TE_INSTALL}"
     for app in ${!papps}; do
@@ -340,7 +354,7 @@ build_agent_apps() {
             --envvars="${!pappenv} ${USE_ENV_CCACHE_DIR}" \
             --meson-path="${meson_path}" \
             --ninja-path="${ninja_path}" \
-            --bin="${ws_platform_bin}" $enable_tce --build-meson || exit 1
+            --bin="${ws_platform_bin}" $enable_tce $native_file --build-meson || exit 1
 
         rsync_from "$p" "${ws_app_builddir}/" "${local_app_builddir}"
     done
@@ -465,6 +479,8 @@ build_platform() {
             done
         fi
     fi
+
+    te_eval_or_ssh "${p}" "test -f ${ws}.meson.ini && rm {ws}.meson.ini"
 
     return ${result}
 }
