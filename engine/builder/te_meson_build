@@ -510,6 +510,7 @@ generate_config_file() {
     local as=
     local strip=
     local pkgconfig=
+    local pkgconfig_path=
     local others=
     for parm in ${parms_var} ; do
         case ${parm} in
@@ -535,6 +536,8 @@ generate_config_file() {
             NINJA=*)
                 :
                 ;;
+            PKG_CONFIG_PATH=*)
+                pkgconfig_path="${parm#PKG_CONFIG_PATH=}" ;;
             *)
                 others="${others} ${parm}" ;;
         esac
@@ -543,20 +546,27 @@ generate_config_file() {
         warning "Unsupported platform parameters:${others}"
     fi
 
-    if test -z "${host}${cc}${cpp}${ld}${ar}${as}${strip}${pkg_config}" ; then
+    if test -z "${host}${cc}${cpp}${ld}${ar}${as}${strip}${pkg_config}${pkgconfig_path}" ; then
         return
     fi
 
     if test -z "$host" -o "$host" = $(gcc -dumpmachine); then
-        echo "[binaries]" > $conffile
-        test -n "$cc" && echo "c = '${cc}'" >> $conffile
-        test -n "$cpp" && echo "cpp = '${cpp}'" >> $conffile
-        test -n "$ld" && echo "ld = '${ld}'" >> $conffile
-        test -n "$ar" && echo "ar = '${ar}'" >> $conffile
-        test -n "$as" && echo "as = '${as}'" >> $conffile
-        test -n "$strip" && echo "strip = '${strip}'" >> $conffile
-        test -n "$pkgconfig" && echo "pkgconfig = '${pkgconfig}'" >> $conffile
-        meson_args="${meson_args} --native-file=${conffile}"
+        if test -n "${host}${cc}${cpp}${ld}${ar}${as}${strip}${pkg_config}" ; then
+            echo "[binaries]" > $conffile
+            test -n "$cc" && echo "c = '${cc}'" >> $conffile
+            test -n "$cpp" && echo "cpp = '${cpp}'" >> $conffile
+            test -n "$ld" && echo "ld = '${ld}'" >> $conffile
+            test -n "$ar" && echo "ar = '${ar}'" >> $conffile
+            test -n "$as" && echo "as = '${as}'" >> $conffile
+            test -n "$strip" && echo "strip = '${strip}'" >> $conffile
+            test -n "$pkgconfig" && echo "pkgconfig = '${pkgconfig}'" >> $conffile
+            meson_args="${meson_args} --native-file=${conffile}"
+        fi
+
+        if test -n "$pkgconfig_path"; then
+            echo "[paths]" >> $conffile
+            echo "pkg_config_path = '${pkgconfig_path}'" >> $conffile
+        fi
         return
     fi
 
