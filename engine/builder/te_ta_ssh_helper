@@ -418,6 +418,7 @@ te_ta_to_platform() {
     # configure and Makefile. The values of variables *FLAGS_VAR are
     # used for execution files configure and Makefile.
     maybe_export "${platform}_CC"           "${ta}_CC"
+    maybe_export "${platform}_CPP"          "${ta}_CPP"
     maybe_export "${platform}_CFLAGS"       "${ta}_CFLAGS"
     maybe_export "${platform}_CFLAGS_VAR"   "${ta}_CFLAGS_VAR"
     maybe_export "${platform}_CPPFLAGS"     "${ta}_CPPFLAGS"
