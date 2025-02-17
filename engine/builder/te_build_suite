@@ -75,6 +75,28 @@ mkdir -p ${TE_INSTALL_SUITE}
 
 . ${TE_BASE}/engine/builder/te_meson_functions
 
+function get_meson_path() {
+    local meson_path="meson"
+
+    if test -n "${TE_BUILD_MESON_PATH}"; then
+        meson_path=${TE_BUILD_MESON_PATH}
+    fi
+
+    echo ${meson_path}
+}
+
+function get_ninja_path() {
+    local ninja_path="ninja"
+
+    if test -n "${TE_BUILD_NINJA_PATH}"; then
+        ninja_path=${TE_BUILD_NINJA_PATH}
+    fi
+
+    echo ${ninja_path}
+}
+MESON_PATH=$(get_meson_path)
+NINJA_PATH=$(get_ninja_path)
+
 # Helper function to run ninja taking ninja-build vs ninja difference
 # on various distos into account and split stdout and stderr streams
 function run_ninja () {
@@ -82,7 +104,7 @@ function run_ninja () {
 
     which ninja-build >/dev/null 2>&1 &&
         ninja_exec=ninja-build ||
-        ninja_exec=ninja
+        ninja_exec=$NINJA_PATH
     # Run ninja in subshell to avoid pipefail option setting inheritance
     (
         set -o pipefail
@@ -97,13 +119,13 @@ function run_meson_install () {
     (
         set -o pipefail
         export NINJA_STATUS="[ninja][%f/%t] "
-        meson install --only-changed | ninja_status_filter
+        $MESON_PATH install --only-changed | ninja_status_filter
     )
 }
 
 # Helper function for running meson/ninja install
 function build_and_install () {
-    meson install --help | grep "meson install" > /dev/null 2> /dev/null
+    $MESON_PATH install --help | grep "${MESON_PATH} install" > /dev/null 2> /dev/null
     supports_steps=$?
     if test ${supports_steps} -eq 0 ; then
         # Build with ninja
@@ -149,11 +171,11 @@ if ${MESON_BUILD} ; then
     echo "${meson_args}" >meson.args.new
 
     if test ! -f meson.args ; then
-        eval meson ${meson_nv_args} ${meson_args} "${SOURCES}" || exit 1
+        eval NINJA="${NINJA_PATH}" "${MESON_PATH}" ${meson_nv_args} ${meson_args} "${SOURCES}" || exit 1
         echo "${meson_nv_args}" >meson.nv_args
         echo "${meson_args}" >meson.args
     elif ! diff -q meson.args meson.args.new 2>/dev/null ; then
-        eval meson configure ${meson_args} || exit 1
+        eval NINJA="${NINJA_PATH}" "${MESON_PATH}" configure ${meson_args} || exit 1
         echo "${meson_args}" >meson.args
     fi
     build_and_install || exit 1
