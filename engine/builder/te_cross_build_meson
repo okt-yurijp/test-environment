@@ -173,30 +173,33 @@ build_process_cmd() {
 #
 process_ext_and_apps_parms() {
     local var_name="$1" ; shift
-    local -n ref_arr=$1 ; shift
+    local ref_arr_name="$1" ; shift
 
     local with_vcs_stuff=false
     local disable_vcs_ignores=false
     local i
     local param
 
-    for param in ${!var_name} ; do
+    # Iterate over the values in the variable indicated by var_name
+    for param in ${!var_name}; do
         case "$param" in
             --with-vcs-stuff) with_vcs_stuff=true ;;
             --disable-vcs-ignores) disable_vcs_ignores=true ;;
-            *) error "unsupported '${!var_name}' value in $var_name" ;;
+            *) echo "Error: unsupported '${param}' value in $var_name" ;;
         esac
     done
 
-    if [[ "$with_vcs_stuff" == false ]] ; then
+    # Append RSYNC_VCS_STUFF if with_vcs_stuff is false
+    if [[ "$with_vcs_stuff" == false ]]; then
         for i in "${RSYNC_VCS_STUFF[@]}"; do
-            ref_arr+=("$i")
+            eval "$ref_arr_name+=(\"$i\")"
         done
     fi
 
-    if [[ "$disable_vcs_ignores" == false ]] ; then
+    # Append RSYNC_VCS_IGNORES if disable_vcs_ignores is false
+    if [[ "$disable_vcs_ignores" == false ]]; then
         for i in "${RSYNC_VCS_IGNORES[@]}"; do
-            ref_arr+=("$i")
+            eval "$ref_arr_name+=(\"$i\")"
         done
     fi
 }
