@@ -53,7 +53,7 @@ if dep_readline.found() and cc.has_function('readline',
     deps += [ dep_readline ]
 endif
 
-dep_crypto = cc.find_library('crypto', required: false)
+dep_crypto = dependency('libcrypto', required: false)
 if dep_crypto.found() and cc.has_function('MD5', dependencies: dep_crypto)
     conf.set('HAVE_OPENSSL', 1)
     deps += [ dep_crypto ]
