@@ -273,6 +273,9 @@ remove_common_leading_indent(char *str)
     const char *p;
     char       *write_ptr = str;
 
+    if (!(tester_global_context.flags & TESTER_STRIP_INDENT))
+        return;
+
     min_indent = get_max_common_indent(str);
 
     if (min_indent <= 0)
@@ -657,6 +660,67 @@ get_persons_info(xmlNodePtr *node, const char *node_name,
     return 0;
 }
 
+/**
+ * Get syntax flags.
+ *
+ * @param node      Location of the XML node pointer.
+ * @param flags     Syntax flags.
+ *
+ * @return Status code.
+ */
+static te_errno
+get_syntax_flags(xmlNodePtr *node, tester_flags *flags)
+{
+    char       *val;
+    te_errno    rc;
+    xmlNodePtr  child_node;
+
+    assert(*node != NULL);
+    assert(flags != NULL);
+
+    /* 'syntax' block is optional. */
+    if (xmlStrcmp((*node)->name, CONST_CHAR2XML("syntax")) != 0)
+        return 0;
+
+    child_node = xmlNodeChildren(*node);
+    *node = xmlNodeNext(*node);
+    if (child_node == NULL)
+    {
+        ERROR("Empty syntax section");
+        return TE_RC(TE_TESTER, TE_EINVAL);
+    }
+
+    if (xmlStrcmp(child_node->name, CONST_CHAR2XML("markdown")) == 0)
+    {
+        if ((rc = get_node_with_text_content(&child_node, "markdown",
+                                             &val)) != 0)
+            return rc;
+
+        if (strcmp(val, "on") == 0)
+        {
+            *flags |= TESTER_STRIP_INDENT;
+        }
+        else if (strcmp(val, "off") == 0)
+        {
+            *flags &= ~TESTER_STRIP_INDENT;
+        }
+        else
+        {
+            ERROR("Something strange inside <markdown>: %s", val);
+            free(val);
+            return TE_RC(TE_TESTER, TE_EINVAL);
+        }
+        free(val);
+    }
+
+    if (child_node != NULL)
+    {
+        ERROR("Unexpected element '%s' in syntax", XML2CHAR(child_node->name));
+        return TE_RC(TE_TESTER, TE_EINVAL);
+    }
+
+    return 0;
+}
 
 /**
  * Get option.
@@ -2849,6 +2913,14 @@ get_tester_config(xmlNodePtr root, tester_cfg *cfg,
     {
         if (rc != TE_ENOENT)
             return rc;
+    }
+
+    /* Get optional syntax flags */
+    rc = get_syntax_flags(&node, &tester_global_context.flags);
+    if (rc != 0)
+    {
+        ERROR("Failed to get syntax flags");
+        return rc;
     }
 
     /* Get optional information about suites */
