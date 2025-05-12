@@ -344,7 +344,8 @@ get_text_content(xmlNodePtr node, const char *name, char **content)
         return TE_ENOMEM;
     }
 
-    remove_common_leading_indent(*content);
+    if (tester_global_context.flags & TESTER_STRIP_INDENT)
+        remove_common_leading_indent(*content);
 
     return 0;
 }
@@ -656,6 +657,67 @@ get_persons_info(xmlNodePtr *node, const char *node_name,
     return 0;
 }
 
+/**
+ * Get syntax flags.
+ *
+ * @param node      Location of the XML node pointer.
+ * @param flags     Syntax flags.
+ *
+ * @return Status code.
+ */
+static te_errno
+get_syntax_flags(xmlNodePtr *node, tester_flags *flags)
+{
+    char       *val;
+    te_errno    rc;
+    xmlNodePtr  child_node;
+
+    assert(*node != NULL);
+    assert(flags != NULL);
+
+    /* 'syntax' block is optional. */
+    if (xmlStrcmp((*node)->name, CONST_CHAR2XML("syntax")) != 0)
+        return 0;
+
+    child_node = xmlNodeChildren(*node);
+    *node = xmlNodeNext(*node);
+    if (child_node == NULL)
+    {
+        ERROR("Empty syntax section");
+        return TE_RC(TE_TESTER, TE_EINVAL);
+    }
+
+    if (xmlStrcmp(child_node->name, CONST_CHAR2XML("strip_indent")) == 0)
+    {
+        if ((rc = get_node_with_text_content(&child_node, "strip_indent",
+                                             &val)) != 0)
+            return rc;
+
+        if (strcmp(val, "true") == 0)
+        {
+            *flags |= TESTER_STRIP_INDENT;
+        }
+        else if (strcmp(val, "false") == 0)
+        {
+            *flags &= ~TESTER_STRIP_INDENT;
+        }
+        else
+        {
+            ERROR("Something strange inside <strip_indent>: %s", val);
+            free(val);
+            return TE_RC(TE_TESTER, TE_EINVAL);
+        }
+        free(val);
+    }
+
+    if (child_node != NULL)
+    {
+        ERROR("Unexpected element '%s' in syntax", XML2CHAR(child_node->name));
+        return TE_RC(TE_TESTER, TE_EINVAL);
+    }
+
+    return 0;
+}
 
 /**
  * Get option.
@@ -1938,7 +2000,8 @@ alloc_and_get_var_arg(xmlNodePtr node, bool is_var,
     {
         test_entity_value *v = TAILQ_FIRST(&p->values.head);
 
-        if (v != NULL && v->plain != NULL)
+        if (v != NULL && v->plain != NULL &&
+            tester_global_context.flags & TESTER_STRIP_INDENT)
             remove_common_leading_indent(v->plain);
     }
 
@@ -2849,6 +2912,14 @@ get_tester_config(xmlNodePtr root, tester_cfg *cfg,
     {
         if (rc != TE_ENOENT)
             return rc;
+    }
+
+    /* Get optional syntax flags */
+    rc = get_syntax_flags(&node, &tester_global_context.flags);
+    if (rc != 0)
+    {
+        ERROR("Failed to get syntax flags");
+        return rc;
     }
 
     /* Get optional information about suites */
